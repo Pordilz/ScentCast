@@ -28,8 +28,7 @@ The app follows modern Android development practices, utilizing the **MVVM (Mode
     * *Cold (<10°C):* Filters for Winter, Oud, Vanilla, Leather.
 3.  **UI Layer:** The `ScentViewModel` exposes `LiveData` to the Activities, ensuring the UI updates reactively without memory leaks.
 
-## 📸 Screenshots
-*(Add your screenshots here)*
+
 
 ## 🚀 Setup & Installation
 1.  Clone the repository:
