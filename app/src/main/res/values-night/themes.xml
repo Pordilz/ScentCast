@@ -1,7 +1,8 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.ScentCast" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
-    </style>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_cyan">#69C3E3</color>
+
+    <color name="background_light">#121212</color> <color name="surface_grey">#1E1E1E</color>   <color name="divider_grey">#333333</color>
+
+    <color name="text_primary">#E0E0E0</color>    <color name="text_secondary">#B0B0B0</color>  <color name="black">#FFFFFF</color> <color name="white">#000000</color>
 </resources>

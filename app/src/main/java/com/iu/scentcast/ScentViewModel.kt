@@ -9,23 +9,33 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel for the ScentCast application.
+ * Manages UI-related data and handles communication between the Repository and the UI.
+ * 
+ * Features:
+ * 1. Database operations for fragrance collection.
+ * 2. Weather-based fragrance recommendation.
+ * 3. Discovery engine for new scent suggestions.
+ * 4. Longevity tracker for spray times.
+ */
 class ScentViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: FragranceRepository
     val allFragrances: LiveData<List<Fragrance>>
 
-    // LiveData
+    // Weather and Recommendation State
     private val _currentTemp = MutableLiveData<Double>()
     val currentTemp: LiveData<Double> = _currentTemp
 
     private val _recommendation = MutableLiveData<Fragrance?>()
     val recommendation: LiveData<Fragrance?> = _recommendation
 
-    // NEW: Discovery Feature
+    // Discovery Feature State
     private val _discovery = MutableLiveData<String>()
     val discovery: LiveData<String> = _discovery
 
-    // NEW: Longevity Feature
+    // Longevity Feature State (Persistence using SharedPreferences)
     private val sharedPrefs = application.getSharedPreferences("ScentPrefs", Context.MODE_PRIVATE)
     private val _timeSinceSpray = MutableLiveData<String>()
     val timeSinceSpray: LiveData<String> = _timeSinceSpray
@@ -34,51 +44,52 @@ class ScentViewModel(application: Application) : AndroidViewModel(application) {
         val fragranceDao = AppDatabase.getDatabase(application).fragranceDao()
         repository = FragranceRepository(fragranceDao)
         allFragrances = repository.allFragrances.asLiveData()
-        updateTimeSinceSpray() // Check time on startup
+        updateTimeSinceSpray() // Initialize spray timer on startup
     }
 
+    /**
+     * Adds a new fragrance to the database.
+     */
     fun addFragrance(fragrance: Fragrance) = viewModelScope.launch {
         repository.insert(fragrance)
     }
 
+    /**
+     * Fetches the current weather and triggers the recommendation/discovery logic.
+     */
     fun fetchWeatherAndRecommend() = viewModelScope.launch {
         val weatherResponse = repository.getWeather()
         val temp = weatherResponse?.main?.temp ?: 20.0
         _currentTemp.postValue(temp)
 
-        // Trigger discovery based on this temp
+        // Trigger discovery engine based on the fetched temperature
         recommendNewScent(temp)
     }
 
-    // --- FEATURE 1: SMART LOGIC ALGORITHM ---
+    /**
+     * Recommends a fragrance from the user's collection based on the current temperature.
+     * 
+     * @param temp The current temperature in Celsius.
+     * @param collection The list of fragrances to filter from.
+     */
     fun recommendScent(temp: Double, collection: List<Fragrance>) {
-        if (collection.isEmpty()) return
-
-        // Granular Logic
-        val suitableScents = collection.filter { f ->
-            val notes = f.notes.lowercase()
-            val season = f.season.lowercase()
-
-            when {
-                // HOT (> 25): Needs Citrus, Aquatic, Green
-                temp >= 25.0 -> season == "summer" || notes.contains("citrus") || notes.contains("water") || notes.contains("fresh")
-
-                // WARM (20 - 24): Floral, Fruity, Aromatic
-                temp >= 20.0 -> season == "summer" || season == "all year" || notes.contains("floral") || notes.contains("fruit")
-
-                // COOL (10 - 19): Woody, Spicy, Vetiver
-                temp >= 10.0 -> season == "winter" || season == "all year" || notes.contains("wood") || notes.contains("spice")
-
-                // COLD (< 10): Sweet, Vanilla, Leather, Oud
-                else -> season == "winter" || notes.contains("vanilla") || notes.contains("oud") || notes.contains("leather")
-            }
+        if (collection.isEmpty()) {
+            _recommendation.postValue(null)
+            return
         }
 
+        // Logic handled by RecommendationEngine
+        val suitableScents = RecommendationEngine.filterByWeather(temp, collection)
+
+        // Fallback: pick a random suitable scent, or any random scent if no matches
         val finalPick = suitableScents.randomOrNull() ?: collection.random()
+
         _recommendation.postValue(finalPick)
     }
 
-    // --- FEATURE 2: DISCOVERY ENGINE (Static Data) ---
+    /**
+     * Discovery Engine: Provides static suggestions for popular scents based on weather.
+     */
     private fun recommendNewScent(temp: Double) {
         val suggestion = when {
             temp >= 25.0 -> "Try 'Dolce & Gabbana Light Blue' for high heat."
@@ -89,13 +100,18 @@ class ScentViewModel(application: Application) : AndroidViewModel(application) {
         _discovery.postValue(suggestion)
     }
 
-    // --- FEATURE 3: LONGEVITY TRACKER ---
+    /**
+     * Longevity Tracker: Logs the current time as the "spray time".
+     */
     fun logSprayTime() {
         val now = System.currentTimeMillis()
         sharedPrefs.edit().putLong("last_spray_time", now).apply()
         updateTimeSinceSpray()
     }
 
+    /**
+     * Updates the UI-bound timer showing how long ago the user applied a fragrance.
+     */
     private fun updateTimeSinceSpray() {
         val lastTime = sharedPrefs.getLong("last_spray_time", 0)
         if (lastTime == 0L) {
@@ -112,5 +128,19 @@ class ScentViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             _timeSinceSpray.postValue("Applied ${hours}h ${minutes}m ago")
         }
+    }
+
+    /**
+     * Deletes a fragrance from the database.
+     */
+    fun deleteFragrance(fragrance: Fragrance) = viewModelScope.launch {
+        repository.delete(fragrance)
+    }
+
+    /**
+     * Updates a fragrance's details in the database.
+     */
+    fun updateFragrance(fragrance: Fragrance) = viewModelScope.launch {
+        repository.update(fragrance)
     }
 }

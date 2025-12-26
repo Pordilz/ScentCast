@@ -9,6 +9,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.textfield.TextInputEditText
 
+/**
+ * Activity for adding a new fragrance to the user's collection.
+ * Includes form validation and database insertion via [ScentViewModel].
+ */
 class AddFragranceActivity : AppCompatActivity() {
 
     private lateinit var viewModel: ScentViewModel
@@ -17,34 +21,34 @@ class AddFragranceActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_fragrance)
 
-        // 1. Initialize ViewModel
+        // Initialize ViewModel
         viewModel = ViewModelProvider(this)[ScentViewModel::class.java]
 
-        // 2. Bind UI Elements
+        // Bind UI Elements
         val etName = findViewById<TextInputEditText>(R.id.etName)
         val etHouse = findViewById<TextInputEditText>(R.id.etHouse)
         val etNotes = findViewById<TextInputEditText>(R.id.etNotes)
         val radioGroup = findViewById<RadioGroup>(R.id.radioGroupSeason)
         val btnSave = findViewById<Button>(R.id.btnSave)
 
-        // 3. Handle Save Click
+        // Handle the Save button click
         btnSave.setOnClickListener {
             val name = etName.text.toString()
             val house = etHouse.text.toString()
             val notes = etNotes.text.toString()
 
-            // Get selected season
+            // Retrieve the selected season from the RadioGroup
             val selectedId = radioGroup.checkedRadioButtonId
             val radioButton = findViewById<RadioButton>(selectedId)
             val season = radioButton.text.toString()
 
-            // Validation: Check if fields are empty
+            // Basic validation: ensure all fields are populated
             if (name.isBlank() || house.isBlank() || notes.isBlank()) {
                 Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            // 4. Create Object & Save to DB
+            // Create a new Fragrance object and save it to the database
             val newFragrance = Fragrance(
                 name = name,
                 house = house,
@@ -55,7 +59,7 @@ class AddFragranceActivity : AppCompatActivity() {
             viewModel.addFragrance(newFragrance)
 
             Toast.makeText(this, "Saved!", Toast.LENGTH_SHORT).show()
-            finish() // Close this screen and go back
+            finish() // Close the activity and return to the previous screen
         }
     }
 }

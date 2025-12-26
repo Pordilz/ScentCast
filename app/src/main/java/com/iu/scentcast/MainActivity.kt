@@ -7,6 +7,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 
+/**
+ * Main entry point of the ScentCast application.
+ * This activity displays the current weather, recommends a fragrance from the user's collection,
+ * provides a discovery suggestion, and tracks application longevity (spray timer).
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: ScentViewModel
@@ -28,20 +33,22 @@ class MainActivity : AppCompatActivity() {
         val tvTimer = findViewById<TextView>(R.id.tvTimer)
         val btnSpray = findViewById<Button>(R.id.btnSpray)
 
-        // 3. Trigger the Logic (Fetch Weather)
+        // 3. Initial Data Fetch
         viewModel.fetchWeatherAndRecommend()
 
-        // 4. Observe Weather Data (Updates automatically when data arrives)
+        // 4. Observers
+        
+        // Observe Temperature changes and update the weather display
         viewModel.currentTemp.observe(this) { temp ->
             tvWeather.text = "${Constants.MY_CITY}: ${temp}°C"
 
-            // Once we have temp, we try to recommend from the current list
+            // Trigger local recommendation once temperature is available
             viewModel.allFragrances.value?.let { collection ->
                 viewModel.recommendScent(temp, collection)
             }
         }
 
-        // 5. Observe Recommendation Data
+        // Observe Recommendation changes and update the central fragrance display
         viewModel.recommendation.observe(this) { fragrance ->
             if (fragrance != null) {
                 tvRecommendation.text = fragrance.name
@@ -52,21 +59,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 6. Observe Collection Changes (Retry recommendation if you just added a bottle)
+        // Observe Collection changes to ensure recommendations stay up-to-date
         viewModel.allFragrances.observe(this) { collection ->
             val temp = viewModel.currentTemp.value ?: 20.0
             viewModel.recommendScent(temp, collection)
         }
 
-        // Observe Discovery
+        // Observe Discovery engine suggestions
         viewModel.discovery.observe(this) { text ->
             tvDiscovery.text = text
         }
 
-        // Observe Timer
+        // Observe Spray Timer (Longevity Tracker)
         viewModel.timeSinceSpray.observe(this) { time ->
             tvTimer.text = time
-            // Visual cue: Make text Red if it says "Reapply"
+            // Change color to highlight when it's time to reapply
             if (time.contains("Reapply")) {
                 tvTimer.setTextColor(getColor(R.color.brand_cyan))
             } else {
@@ -74,22 +81,23 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 7. Button Actions
+        // 5. Click Listeners
+        
+        // Navigate to the "Add Fragrance" screen
         btnAdd.setOnClickListener {
-            // Navigate to the Add Screen
             val intent = Intent(this, AddFragranceActivity::class.java)
             startActivity(intent)
         }
 
+        // Navigate to the "My Collection" screen
         btnCollection.setOnClickListener {
             val intent = Intent(this, CollectionActivity::class.java)
             startActivity(intent)
         }
 
-        // Button Logic
+        // Log a new spray event
         btnSpray.setOnClickListener {
             viewModel.logSprayTime()
         }
-
     }
 }
